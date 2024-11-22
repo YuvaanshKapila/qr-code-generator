@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.2.4/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <title>QR Code Generator</title>
+  <style>
+    /* Custom Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes wiggle {
+      0%, 100% {
+        transform: rotate(-3deg);
+      }
+      50% {
+        transform: rotate(3deg);
+      }
+    }
+
+    .wiggle:hover {
+      animation: wiggle 0.3s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-100 via-white to-gray-200 min-h-screen flex items-center justify-center">
+  <div class="bg-white shadow-2xl rounded-xl p-8 w-full max-w-3xl fade-in">
+    <h1 class="text-4xl font-extrabold text-blue-600 mb-6 text-center animate-pulse">QR Code Generator</h1>
+    <form id="qrForm" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Type -->
+        <div>
+          <label class="block text-lg font-semibold text-gray-700 mb-2">Input Type</label>
+          <select id="inputType" class="w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-300">
+            <option value="url">URL</option>
+            <option value="text">Text</option>
+            <option value="phone">Phone Number</option>
+            <option value="wifi">Wi-Fi</option>
+          </select>
+        </div>
+        <!-- Input Value -->
+        <div id="inputField">
+          <label class="block text-lg font-semibold text-gray-700 mb-2">Input</label>
+          <input
+            id="inputValue"
+            type="text"
+            placeholder="Enter URL, text, or phone number"
+            class="w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+          />
+        </div>
+      </div>
+      <!-- Wi-Fi Fields -->
+      <div id="wifiFields" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-lg font-semibold text-gray-700 mb-2">Wi-Fi Network Name (SSID)</label>
+            <input
+              id="wifiName"
+              type="text"
+              placeholder="Enter Network Name"
+              class="w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+            />
+          </div>
+          <div>
+            <label class="block text-lg font-semibold text-gray-700 mb-2">Password</label>
+            <input
+              id="wifiPassword"
+              type="password"
+              placeholder="Enter Password"
+              class="w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+            />
+          </div>
+        </div>
+      </div>
+      <!-- QR Code Customization -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-lg font-semibold text-gray-700 mb-2">QR Code Size</label>
+          <input
+            id="qrSize"
+            type="number"
+            value="200"
+            min="100"
+            max="1000"
+            class="w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+          />
+        </div>
+        <div>
+          <label class="block text-lg font-semibold text-gray-700 mb-2">QR Code Color</label>
+          <input
+            id="qrColor"
+            type="color"
+            value="#000000"
+            class="w-full h-12 border-none cursor-pointer"
+          />
+        </div>
+        <div>
+          <label class="block text-lg font-semibold text-gray-700 mb-2">Center Image (optional)</label>
+          <input
+            id="imageUpload"
+            type="file"
+            accept="image/*"
+            class="w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+          />
+          <input
+            id="imagePosition"
+            type="range"
+            min="0"
+            max="100"
+            value="50"
+            class="mt-3 w-full"
+          />
+        </div>
+      </div>
+      <!-- Generate Button -->
+      <div class="flex justify-center">
+        <button
+          type="button"
+          id="generateButton"
+          class="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-3 px-6 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-800 transition transform hover:scale-105 wiggle"
+        >
+          Generate QR Code
+        </button>
+      </div>
+    </form>
+    <!-- QR Code Result -->
+    <div id="qrResult" class="mt-8 flex justify-center">
+      <canvas id="qrCanvas" class="rounded-lg shadow-xl"></canvas>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputType = document.getElementById('inputType');
+      const inputField = document.getElementById('inputField');
+      const wifiFields = document.getElementById('wifiFields');
+      const qrSize = document.getElementById('qrSize');
+      const qrColor = document.getElementById('qrColor');
+      const imageUpload = document.getElementById('imageUpload');
+      const imagePosition = document.getElementById('imagePosition');
+      const generateButton = document.getElementById('generateButton');
+      const qrCanvas = document.getElementById('qrCanvas');
+
+      inputType.addEventListener('change', () => {
+        inputField.classList.toggle('hidden', inputType.value === 'wifi');
+        wifiFields.classList.toggle('hidden', inputType.value !== 'wifi');
+      });
+
+      generateButton.addEventListener('click', () => {
+        const value = inputType.value === 'wifi'
+          ? `WIFI:T:WPA;S:${document.getElementById('wifiName').value};P:${document.getElementById('wifiPassword').value};;`
+          : document.getElementById('inputValue').value;
+
+        const options = {
+          width: parseInt(qrSize.value, 10),
+          colorDark: qrColor.value,
+          colorLight: '#ffffff',
+        };
+
+        QRCode.toCanvas(qrCanvas, value, options, (error) => {
+          if (error) console.error(error);
+        });
+
+        const file = imageUpload.files[0];
+        if (file) {
+          const ctx = qrCanvas.getContext('2d');
+          const img = new Image();
+          img.onload = () => {
+            const pos = parseInt(imagePosition.value, 10) / 100;
+            const size = options.width * 0.2;
+            const x = (qrCanvas.width - size) * pos;
+            const y = (qrCanvas.height - size) * pos;
+            ctx.drawImage(img, x, y, size, size);
+          };
+          img.src = URL.createObjectURL(file);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
